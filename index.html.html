@@ -1,0 +1,1420 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>numel: Find Your ML Use Case</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700;800&family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+
+:root {
+  --navy: #222266;
+  --deep: #18184d;
+  --surface: #2a2a7a;
+  --white: #ffffff;
+  --coral: #f48b71;
+  --green: #7fcf88;
+  --muted: rgba(255,255,255,0.42);
+  --border: rgba(255,255,255,0.09);
+  --card: rgba(255,255,255,0.045);
+}
+
+body {
+  font-family: 'Montserrat', sans-serif;
+  background: var(--deep);
+  color: var(--white);
+  min-height: 100vh;
+  overflow-x: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── AMBIENT BG ── */
+.ambient {
+  position: fixed; inset: 0; pointer-events: none; z-index: 0;
+}
+.amb-blob {
+  position: absolute; border-radius: 50%;
+  filter: blur(90px); opacity: 0.18;
+  transition: all 1.2s ease;
+}
+.amb-1 { width:500px; height:500px; top:-120px; right:-100px; background: var(--green); }
+.amb-2 { width:400px; height:400px; bottom:-80px; left:-80px; background: var(--coral); }
+.amb-3 { width:300px; height:300px; top:40%; left:40%; background: #5555cc; opacity: 0.1; }
+
+/* grid lines */
+.grid-bg {
+  position: fixed; inset: 0; pointer-events: none; z-index: 0;
+  background-image:
+    linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px);
+  background-size: 64px 64px;
+}
+
+/* ── LAYOUT ── */
+.wrapper {
+  position: relative; z-index: 1;
+  max-width: 1100px; margin: 0 auto;
+  padding: 0 48px 60px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+@media (max-width: 700px) {
+  .wrapper { padding: 0 20px 40px; }
+}
+
+/* ── HEADER ── */
+header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 28px 0 20px;
+  position: sticky; top: 0; z-index: 20;
+  background: linear-gradient(var(--deep) 85%, transparent);
+  flex-shrink: 0;
+}
+
+.logo {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 20px; font-weight: 800;
+  letter-spacing: -0.5px;
+}
+.logo em { font-style: normal; color: var(--green); }
+
+.step-pills {
+  display: flex; align-items: center; gap: 6px;
+}
+.pill {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 10px; font-weight: 700;
+  letter-spacing: 1px; text-transform: uppercase;
+  padding: 5px 12px; border-radius: 20px;
+  border: 1.5px solid var(--border);
+  color: var(--muted);
+  transition: all 0.3s;
+}
+.pill.active {
+  border-color: var(--green);
+  color: var(--green);
+  background: rgba(127,207,136,0.1);
+}
+.pill.done {
+  border-color: rgba(127,207,136,0.3);
+  color: rgba(127,207,136,0.5);
+}
+.pill-sep { color: var(--border); font-size: 12px; }
+
+/* ── SCREENS ── */
+.screen { display: none; animation: rise 0.45s cubic-bezier(0.16,1,0.3,1); flex: 1; }
+.screen.active { display: flex; flex-direction: column; }
+
+#screen-intro.active,
+#screen-dept.active {
+  justify-content: center;
+}
+
+#screen-prob.active,
+#screen-result.active {
+  justify-content: flex-start;
+  padding-bottom: 60px;
+}
+
+@keyframes rise {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── INTRO ── */
+.intro { padding: 0; max-width: 700px; }
+
+.eyebrow {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 11px; font-weight: 700;
+  letter-spacing: 3px; text-transform: uppercase;
+  color: var(--coral); margin-bottom: 24px;
+  display: flex; align-items: center; gap: 10px;
+}
+.eyebrow::before {
+  content: ''; width: 20px; height: 1.5px; background: var(--coral);
+}
+
+.intro h1 {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: clamp(38px, 5.5vw, 68px);
+  font-weight: 800; line-height: 1.05;
+  margin-bottom: 24px;
+  letter-spacing: -1px;
+}
+.intro h1 span { color: var(--green); }
+
+.intro p {
+  font-size: 17px; color: var(--muted);
+  line-height: 1.8; max-width: 540px;
+  margin-bottom: 44px;
+}
+
+.start-btn {
+  display: inline-flex; align-items: center; gap: 12px;
+  background: var(--green); color: var(--deep);
+  border: none; padding: 18px 40px;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 13px; font-weight: 800;
+  letter-spacing: 2px; text-transform: uppercase;
+  border-radius: 8px; cursor: pointer;
+  transition: all 0.2s;
+}
+.start-btn:hover {
+  background: #8fda98;
+  transform: translateY(-2px);
+  box-shadow: 0 12px 36px rgba(127,207,136,0.4);
+}
+.start-btn svg { transition: transform 0.2s; }
+.start-btn:hover svg { transform: translateX(5px); }
+
+/* ── INTRO STEPS ── */
+.intro-steps {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  margin-bottom: 20px;
+  flex-wrap: nowrap;
+}
+
+.intro-step {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.istep-num {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 10px; font-weight: 800;
+  letter-spacing: 1px;
+  color: var(--deep);
+  background: var(--green);
+  width: 24px; height: 24px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+
+.istep-text {
+  font-size: 14px; font-weight: 500;
+  color: rgba(255,255,255,0.75);
+  line-height: 1.3;
+  white-space: nowrap;
+}
+
+.istep-connector {
+  width: 32px; height: 1.5px;
+  background: linear-gradient(90deg, rgba(127,207,136,0.4), rgba(127,207,136,0.15));
+  margin: 0 12px;
+  flex-shrink: 0;
+}
+
+.istep-time {
+  display: flex; align-items: center; gap: 6px;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 11px; font-weight: 700;
+  letter-spacing: 1.5px; text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 24px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* ── SECTION LABELS ── */
+.section-label {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 11px; font-weight: 700;
+  letter-spacing: 2.5px; text-transform: uppercase;
+  color: var(--muted); margin-bottom: 10px;
+  margin-top: 0;
+}
+
+.section-title {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: clamp(24px, 3.5vw, 36px);
+  font-weight: 800; margin-bottom: 32px;
+  line-height: 1.15; letter-spacing: -0.5px;
+}
+
+/* ── DEPT CARDS ── */
+.dept-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
+  width: 100%;
+}
+
+@media (max-width: 560px) {
+  .dept-grid { grid-template-columns: 1fr; }
+}
+
+.dept-card {
+  background: var(--card);
+  border: 1.5px solid var(--border);
+  border-radius: 18px;
+  padding: 36px 36px;
+  cursor: pointer;
+  transition: all 0.22s;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 28px;
+  min-height: 120px;
+}
+.dept-card::after {
+  content: '';
+  position: absolute; inset: 0;
+  background: linear-gradient(135deg, rgba(127,207,136,0.07) 0%, transparent 60%);
+  opacity: 0; transition: opacity 0.2s;
+}
+.dept-card:hover { border-color: rgba(127,207,136,0.45); transform: translateY(-3px); }
+.dept-card:hover::after { opacity: 1; }
+.dept-card.selected {
+  border-color: var(--green);
+  background: rgba(127,207,136,0.08);
+}
+.dept-card.selected::after { opacity: 1; }
+
+.dept-icon {
+  font-size: 42px;
+  display: block; line-height: 1;
+  flex-shrink: 0;
+}
+.dept-name {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 18px; font-weight: 700;
+  margin-bottom: 6px; line-height: 1.2;
+}
+.dept-sub {
+  font-size: 13px; color: var(--muted); line-height: 1.55;
+}
+.dept-check {
+  position: absolute; top: 16px; right: 16px;
+  width: 22px; height: 22px; border-radius: 50%;
+  background: var(--green);
+  display: none; align-items: center; justify-content: center;
+}
+.dept-card-full { grid-column: 1 / -1; max-width: calc(50% - 10px); }
+
+@media (max-width: 560px) { .dept-card-full { max-width: 100%; } }
+
+/* ── PROBLEM CARDS ── */
+.problem-back {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 11px; font-weight: 700;
+  letter-spacing: 1.5px; text-transform: uppercase;
+  color: var(--muted); cursor: pointer;
+  margin-top: 0; margin-bottom: 12px;
+  border: none; background: none;
+  transition: color 0.2s;
+  padding-top: 16px;
+}
+.problem-back:hover { color: var(--white); }
+
+/* ── PROBLEM SCREEN SPLIT HEADER ── */
+.prob-screen-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 32px;
+  margin-bottom: 36px;
+}
+.prob-screen-left { flex: 1; }
+.prob-screen-right { flex-shrink: 0; padding-bottom: 4px; text-align: right; }
+
+.psb-label {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 10px; font-weight: 700;
+  letter-spacing: 2px; text-transform: uppercase;
+  color: var(--muted); margin-bottom: 6px;
+}
+
+.dept-context {
+  display: inline-flex; align-items: center; gap: 10px;
+  background: none; border: none; padding: 0; margin-bottom: 0;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 24px; font-weight: 800;
+  color: var(--green); letter-spacing: -0.5px;
+}
+
+@media (max-width: 600px) {
+  .prob-screen-header { flex-direction: column; align-items: flex-start; gap: 12px; }
+  .prob-screen-right { text-align: left; }
+  .dept-context { font-size: 18px; }
+}
+
+.problems-list {
+  display: flex; flex-direction: column; gap: 14px;
+}
+
+.prob-card {
+  background: var(--card);
+  border: 1.5px solid var(--border);
+  border-radius: 14px;
+  padding: 24px 28px;
+  cursor: pointer;
+  transition: all 0.22s;
+  display: flex; align-items: flex-start;
+  gap: 20px;
+  position: relative;
+}
+.prob-card:hover {
+  border-color: rgba(244,139,113,0.4);
+  background: rgba(244,139,113,0.04);
+  transform: translateX(5px);
+}
+.prob-card.selected {
+  border-color: var(--coral);
+  background: rgba(244,139,113,0.07);
+}
+
+.prob-num {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 12px; font-weight: 700;
+  color: var(--muted); letter-spacing: 1px;
+  flex-shrink: 0; padding-top: 3px; min-width: 28px;
+}
+.prob-card.selected .prob-num { color: var(--coral); }
+
+.prob-content { flex: 1; }
+.prob-title {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 16px; font-weight: 700;
+  margin-bottom: 8px; line-height: 1.35;
+}
+.prob-desc {
+  font-size: 13px; color: var(--muted); line-height: 1.65;
+}
+
+.prob-arrow {
+  margin-left: auto; color: var(--muted);
+  flex-shrink: 0; padding-top: 3px;
+  transition: transform 0.2s;
+}
+.prob-card:hover .prob-arrow { transform: translateX(5px); color: var(--coral); }
+
+/* ── RESULT ── */
+.result-back {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 11px; font-weight: 700;
+  letter-spacing: 1.5px; text-transform: uppercase;
+  color: var(--muted); cursor: pointer;
+  margin-top: 0; margin-bottom: 0;
+  padding-top: 16px;
+  border: none; background: none;
+  transition: color 0.2s;
+}
+.result-back:hover { color: var(--white); }
+
+.result-breadcrumb {
+  display: flex; align-items: center; gap: 10px;
+  margin-bottom: 40px; flex-wrap: wrap;
+}
+.bc-tag {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 14px; border-radius: 20px;
+  font-size: 12px; font-weight: 600;
+}
+.bc-dept { background: rgba(127,207,136,0.12); border: 1px solid rgba(127,207,136,0.2); color: var(--green); }
+.bc-prob { background: rgba(244,139,113,0.1); border: 1px solid rgba(244,139,113,0.2); color: var(--coral); }
+.bc-sep { color: var(--border); font-size: 16px; }
+
+/* EDUCATION BLOCK */
+.edu-block {
+  background: var(--card);
+  border: 1.5px solid var(--border);
+  border-radius: 16px;
+  padding: 40px;
+  margin-bottom: 16px;
+  position: relative; overflow: hidden;
+}
+.edu-block::before {
+  content: '';
+  position: absolute; top:0; left:0; right:0; height: 2px;
+  background: linear-gradient(90deg, var(--green), transparent);
+}
+
+.edu-label {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 10px; font-weight: 700;
+  letter-spacing: 2.5px; text-transform: uppercase;
+  color: var(--green); margin-bottom: 16px;
+  display: flex; align-items: center; gap: 8px;
+}
+.edu-label-dot {
+  width: 5px; height: 5px; border-radius: 50%;
+  background: var(--green);
+}
+
+.edu-headline {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: clamp(18px, 2.2vw, 24px);
+  font-weight: 800; line-height: 1.3;
+  margin-bottom: 16px;
+}
+
+.edu-explain {
+  font-size: 15px; color: rgba(255,255,255,0.75);
+  line-height: 1.85; margin-bottom: 32px;
+  max-width: 780px;
+}
+
+.how-it-works {
+  display: flex; flex-direction: column; gap: 12px;
+}
+
+.how-step {
+  display: flex; align-items: flex-start; gap: 16px;
+  padding: 16px 20px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 10px;
+}
+.how-n {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 11px; font-weight: 800;
+  color: var(--green); min-width: 22px; padding-top: 2px;
+}
+.how-text {
+  font-size: 14px; color: rgba(255,255,255,0.7); line-height: 1.65;
+}
+.how-text strong { color: var(--white); font-weight: 600; }
+
+/* OUTCOME STRIP */
+.outcome-strip {
+  display: grid; grid-template-columns: repeat(3, 1fr);
+  gap: 14px; margin-bottom: 16px;
+}
+@media (max-width: 520px) { .outcome-strip { grid-template-columns: 1fr; } }
+
+.outcome-card {
+  background: rgba(127,207,136,0.06);
+  border: 1px solid rgba(127,207,136,0.15);
+  border-radius: 12px; padding: 24px 20px;
+  text-align: center;
+}
+.outcome-val {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 26px; font-weight: 800;
+  color: var(--green); margin-bottom: 6px;
+}
+.outcome-label {
+  font-size: 12px; color: var(--muted); line-height: 1.5;
+}
+
+/* PITCH BLOCK */
+.pitch-block {
+  background: linear-gradient(135deg, rgba(34,34,102,0.6) 0%, rgba(42,42,122,0.4) 100%);
+  border: 1.5px solid rgba(127,207,136,0.25);
+  border-radius: 16px;
+  padding: 40px;
+  margin-bottom: 24px;
+  position: relative; overflow: hidden;
+}
+.pitch-block::before {
+  content: '';
+  position: absolute; top:0; left:0; right:0; height: 2px;
+  background: linear-gradient(90deg, var(--coral), var(--green));
+}
+
+.pitch-label {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 10px; font-weight: 700;
+  letter-spacing: 2.5px; text-transform: uppercase;
+  color: var(--coral); margin-bottom: 16px;
+  display: flex; align-items: center; gap: 8px;
+}
+.pitch-label-dot {
+  width: 5px; height: 5px; border-radius: 50%;
+  background: var(--coral);
+}
+
+.pitch-headline {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: clamp(17px, 2.2vw, 21px);
+  font-weight: 800; line-height: 1.35;
+  margin-bottom: 14px;
+}
+
+.pitch-body {
+  font-size: 14px; color: rgba(255,255,255,0.7);
+  line-height: 1.85; margin-bottom: 26px;
+  max-width: 720px;
+}
+
+.modules-row {
+  display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 28px;
+}
+.module-tag {
+  background: rgba(244,139,113,0.1);
+  border: 1px solid rgba(244,139,113,0.2);
+  border-radius: 6px; padding: 7px 14px;
+  font-size: 12px; font-weight: 600;
+  color: var(--coral);
+}
+
+.cta-row {
+  display: flex; gap: 12px; flex-wrap: wrap;
+}
+
+.btn-green {
+  background: var(--green); color: var(--deep);
+  border: none; padding: 15px 32px;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 12px; font-weight: 800;
+  letter-spacing: 1.5px; text-transform: uppercase;
+  border-radius: 6px; cursor: pointer; transition: all 0.2s;
+}
+.btn-green:hover {
+  background: #8fda98; transform: translateY(-2px);
+  box-shadow: 0 6px 24px rgba(127,207,136,0.3);
+}
+
+.btn-outline {
+  background: transparent; color: var(--white);
+  border: 1.5px solid var(--border); padding: 15px 28px;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 12px; font-weight: 700;
+  letter-spacing: 1px; text-transform: uppercase;
+  border-radius: 6px; cursor: pointer; transition: all 0.2s;
+}
+.btn-outline:hover { border-color: rgba(255,255,255,0.3); background: rgba(255,255,255,0.04); }
+
+@media (max-width: 580px) {
+  .step-pills { display: none; }
+  .edu-block, .pitch-block { padding: 28px 20px; }
+}
+</style>
+</head>
+<body>
+
+<div class="ambient">
+  <div class="amb-blob amb-1"></div>
+  <div class="amb-blob amb-2"></div>
+  <div class="amb-blob amb-3"></div>
+</div>
+<div class="grid-bg"></div>
+
+<div class="wrapper">
+
+  <header>
+    <div class="logo">nu<em>mel</em></div>
+    <div class="step-pills">
+      <div class="pill active" id="pill-1">01 Department</div>
+      <div class="pill-sep">›</div>
+      <div class="pill" id="pill-2">02 Problem</div>
+      <div class="pill-sep">›</div>
+      <div class="pill" id="pill-3">03 Solution</div>
+    </div>
+  </header>
+
+  <!-- ══════════════ INTRO ══════════════ -->
+  <div class="screen active" id="screen-intro">
+    <div class="intro">
+      <div class="eyebrow">numel for business teams</div>
+      <h1>What does numel actually<br><span>fix for your team?</span></h1>
+      <div class="intro-steps">
+        <div class="intro-step">
+          <div class="istep-num">01</div>
+          <div class="istep-text">Pick your department</div>
+        </div>
+        <div class="istep-connector"></div>
+        <div class="intro-step">
+          <div class="istep-num">02</div>
+          <div class="istep-text">Name the real problem</div>
+        </div>
+        <div class="istep-connector"></div>
+        <div class="intro-step">
+          <div class="istep-num">03</div>
+          <div class="istep-text">See exactly what numel does about it</div>
+        </div>
+      </div>
+      <div class="istep-time">
+        <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.8" width="12" height="12"><circle cx="7" cy="7" r="6"/><path d="M7 4v3l2 1.5"/></svg>
+        2 minutes
+      </div>
+      <button class="start-btn" onclick="goTo('screen-dept')">
+        Find my use case
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><path d="M3 8h10M9 4l4 4-4 4"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- ══════════════ STEP 1: DEPT ══════════════ -->
+  <div class="screen" id="screen-dept">
+    <div class="section-label">Step 01</div>
+    <div class="section-title">Which team are you on?</div>
+
+    <div class="dept-grid" id="dept-grid">
+      <!-- rendered by JS -->
+    </div>
+  </div>
+
+  <!-- ══════════════ STEP 2: PROBLEM ══════════════ -->
+  <div class="screen" id="screen-prob">
+    <div class="prob-screen-header">
+      <div class="prob-screen-left">
+        <button class="problem-back" onclick="goTo('screen-dept')">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="12" height="12"><path d="M13 8H3M7 4L3 8l4 4"/></svg>
+          Change department
+        </button>
+        <div class="section-label">Step 02</div>
+        <div class="section-title">What's the problem<br>that doesn't go away?</div>
+      </div>
+      <div class="prob-screen-right">
+        <div class="prob-step-badge">
+          <div class="psb-label">You selected</div>
+          <div class="dept-context" id="dept-context-badge"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="problems-list" id="problems-list">
+      <!-- rendered by JS -->
+    </div>
+  </div>
+
+  <!-- ══════════════ STEP 3: RESULT ══════════════ -->
+  <div class="screen" id="screen-result">
+    <button class="result-back" onclick="goTo('screen-prob')">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="12" height="12"><path d="M13 8H3M7 4L3 8l4 4"/></svg>
+      Different problem
+    </button>
+
+    <div class="result-breadcrumb" id="result-breadcrumb"></div>
+
+    <!-- EDUCATION BLOCK -->
+    <div class="edu-block">
+      <div class="edu-label"><div class="edu-label-dot"></div>What numel does here</div>
+      <div class="edu-headline" id="edu-headline"></div>
+      <div class="edu-explain" id="edu-explain"></div>
+      <div class="how-it-works" id="how-steps"></div>
+    </div>
+
+    <!-- OUTCOMES -->
+    <div class="outcome-strip" id="outcome-strip"></div>
+
+    <!-- PITCH BLOCK -->
+    <div class="pitch-block">
+      <div class="pitch-label"><div class="pitch-label-dot"></div>How numel builds this capability</div>
+      <div class="pitch-headline" id="pitch-headline"></div>
+      <div class="pitch-body" id="pitch-body"></div>
+      <div class="modules-row" id="pitch-modules"></div>
+      <div class="cta-row">
+        <button class="btn-green">Talk to the numel team</button>
+        <button class="btn-outline" onclick="goTo('screen-dept')">Explore another use case</button>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /wrapper -->
+
+<script>
+// ══════════════════════════════════════
+// DATA
+// ══════════════════════════════════════
+
+const departments = [
+  {
+    id: 'sales',
+    icon: '📈',
+    name: 'Sales & Revenue',
+    sub: 'Pipeline, forecasting, conversion',
+  },
+  {
+    id: 'marketing',
+    icon: '📣',
+    name: 'Marketing',
+    sub: 'Campaigns, attribution, audience',
+  },
+  {
+    id: 'finance',
+    icon: '💰',
+    name: 'Finance & Risk',
+    sub: 'Forecasting, anomalies, compliance',
+  },
+  {
+    id: 'hr',
+    icon: '👥',
+    name: 'HR & People',
+    sub: 'Hiring, retention, workforce planning',
+  },
+  {
+    id: 'ops',
+    icon: '⚙️',
+    name: 'Operations',
+    sub: 'Efficiency, demand, supply chain',
+  }
+];
+
+const problems = {
+  sales: [
+    {
+      title: 'We can\'t tell which leads are actually worth chasing',
+      desc: 'Reps spend equal time on hot and dead leads. No system to prioritise.',
+      edu: {
+        headline: 'numel shows your team how to score every lead so reps only call the ones likely to close.',
+        explain: 'Lead scoring models learn from historical wins and losses to assign a probability to every new lead. The model looks at firmographics, engagement signals, deal stage patterns, and timing, then outputs a score your team can act on.',
+        steps: [
+          { n: '01', text: '<strong>Data collection:</strong> CRM history, email opens, website visits, company size, and industry are fed into the model' },
+          { n: '02', text: '<strong>Feature engineering:</strong> The model identifies which signals actually predict conversion, and the results are often surprising' },
+          { n: '03', text: '<strong>Scoring in production:</strong> Every new lead gets a score automatically so your pipeline is ranked, not just listed' },
+          { n: '04', text: '<strong>Feedback loop:</strong> Wins and losses update the model so it gets sharper over time' }
+        ],
+        outcomes: [
+          { val: '2–3×', label: 'More time on high-probability deals' },
+          { val: '↓30%', label: 'Reduction in wasted outreach' },
+          { val: 'Live', label: 'Scores update with each new signal' }
+        ],
+        pitch: {
+          headline: 'Your sales team can learn to build and use lead scoring without needing a data scientist.',
+          body: 'numel\'s Sales and Revenue track teaches teams how lead scoring models work, how to interpret outputs critically, and how to brief technical teams or vendors on what you actually need. No code required. Deep understanding included.',
+          modules: ['How classification models work', 'Reading model outputs', 'Feature importance', 'Evaluating vendor AI claims', 'Building a feedback loop']
+        }
+      }
+    },
+    {
+      title: 'Our revenue forecasts are always off',
+      desc: 'We\'re using spreadsheets and gut feel. Leadership wants accuracy we can\'t deliver.',
+      edu: {
+        headline: 'numel trains your team to build forecasts from patterns your spreadsheet can\'t see.',
+        explain: 'Time-series forecasting models learn from your historical revenue data, accounting for seasonality, deal cycles, team capacity, and market signals. They output a range with confidence intervals rather than a single number your team has to defend.',
+        steps: [
+          { n: '01', text: '<strong>Historical patterns:</strong> The model ingests past quarters, seasonal dips, growth trends, and pipeline velocity' },
+          { n: '02', text: '<strong>External signals:</strong> Layering in macro signals such as market conditions and industry proxies improves accuracy further' },
+          { n: '03', text: '<strong>Probabilistic output:</strong> Instead of one number, the model gives a range covering base, upside, and downside scenarios' },
+          { n: '04', text: '<strong>Variance explanations:</strong> The model flags which deals or segments are the biggest sources of uncertainty' }
+        ],
+        outcomes: [
+          { val: '↑40%', label: 'Forecast accuracy vs. spreadsheet baselines' },
+          { val: '3 views', label: 'Base / upside / downside scenarios automatically' },
+          { val: 'Weekly', label: 'Forecasts that update with live pipeline data' }
+        ],
+        pitch: {
+          headline: 'Finance and sales teams that understand forecasting models make better decisions and give better presentations.',
+          body: 'numel trains your team on time-series concepts, how to stress-test model outputs, and how to communicate uncertainty to leadership without losing credibility. Practically applied, not academically taught.',
+          modules: ['Time-series fundamentals', 'Regression vs. probabilistic models', 'Scenario modelling', 'Communicating model uncertainty', 'Evaluating forecast tools']
+        }
+      }
+    },
+    {
+      title: 'High churn in our customer base and we don\'t see it coming',
+      desc: 'We find out a customer is churning when they cancel. There\'s no early signal.',
+      edu: {
+        headline: 'Churn prediction models flag at-risk accounts weeks before they leave.',
+        explain: 'Churn models are trained on the behaviour patterns of customers who eventually left, including login frequency, support tickets, engagement drops, and contract proximity. New accounts showing similar signals get flagged early, while you can still act.',
+        steps: [
+          { n: '01', text: '<strong>Churn signal mapping:</strong> Identify which behaviours preceded past churns, such as usage drops, ticket spikes, and payment delays' },
+          { n: '02', text: '<strong>Model training:</strong> A classification model learns the pattern of accounts that are about to churn versus those that are healthy' },
+          { n: '03', text: '<strong>Risk segmentation:</strong> Accounts are bucketed into risk tiers of low, medium, and high, each with a suggested action' },
+          { n: '04', text: '<strong>CS team integration:</strong> High-risk accounts surface in dashboards so teams can intervene proactively' }
+        ],
+        outcomes: [
+          { val: '60–90', label: 'Days early warning before churn occurs' },
+          { val: '↑25%', label: 'Retention when teams act on early signals' },
+          { val: 'Ranked', label: 'At-risk accounts by urgency, not guesswork' }
+        ],
+        pitch: {
+          headline: 'Your customer success team should be able to interpret churn scores, not just receive them.',
+          body: 'numel trains CS and sales teams on how churn models work, what the scores mean, how to avoid acting on false positives, and how to give feedback that improves model quality over time.',
+          modules: ['Classification model fundamentals', 'Interpreting risk scores', 'False positives & model confidence', 'Feature importance in churn', 'Feedback loops for model improvement']
+        }
+      }
+    },
+    {
+      title: 'We don\'t know which products to cross-sell to which customers',
+      desc: 'Upsell and cross-sell feels like guesswork. Reps pitch everything to everyone.',
+      edu: {
+        headline: 'Recommendation models match the right product to the right account, automatically.',
+        explain: 'Collaborative filtering and propensity models learn from purchase patterns across your customer base. They identify which customers resemble others who bought adjacent products, then surface high-propensity cross-sell opportunities per account.',
+        steps: [
+          { n: '01', text: '<strong>Purchase matrix:</strong> The model maps which products are commonly bought together and in what sequence' },
+          { n: '02', text: '<strong>Account profiling:</strong> Each account is matched to similar accounts by industry, size, usage, and history' },
+          { n: '03', text: '<strong>Propensity scoring:</strong> Each account gets a ranked list of next-best offers with likelihood scores' },
+          { n: '04', text: '<strong>Rep integration:</strong> Recommendations surface in the CRM so reps enter conversations with context rather than cold pitches' }
+        ],
+        outcomes: [
+          { val: '↑35%', label: 'Cross-sell conversion vs. unprompted pitching' },
+          { val: 'Ranked', label: 'Next-best offer per account, not per product' },
+          { val: '↓', label: 'Friction and rejection from irrelevant offers' }
+        ],
+        pitch: {
+          headline: 'Understanding recommendation logic helps your team use it actively, not just receive it.',
+          body: 'numel teaches sales and revenue teams how propensity models work, how to sanity-check recommendations, and how to feed back signal that sharpens the model over time.',
+          modules: ['Recommendation systems overview', 'Collaborative vs. content-based filtering', 'Propensity scoring logic', 'CRM and model integration concepts', 'Evaluating recommendation quality']
+        }
+      }
+    }
+  ],
+
+  marketing: [
+    {
+      title: 'We can\'t figure out what\'s actually driving conversions',
+      desc: 'Attribution is a mess. Every channel claims credit. We\'re making budget decisions blind.',
+      edu: {
+        headline: 'numel teaches your team to use attribution models that distribute credit based on actual conversion paths, not last click.',
+        explain: 'Multi-touch attribution models analyse full customer journeys and assign fractional credit to every touchpoint that contributed to a conversion. You stop rewarding the last touchpoint and start understanding what actually moves customers.',
+        steps: [
+          { n: '01', text: '<strong>Journey mapping:</strong> Every touchpoint is recorded, including ads seen, emails opened, and pages visited before a conversion happens' },
+          { n: '02', text: '<strong>Model selection:</strong> Shapley values or Markov chain models distribute credit proportionally based on each touchpoint\'s contribution' },
+          { n: '03', text: '<strong>Channel true ROI:</strong> Each channel gets an accurate contribution score rather than an inflated self-reported one' },
+          { n: '04', text: '<strong>Budget reallocation:</strong> Insights directly inform where to spend more and where you are overpaying' }
+        ],
+        outcomes: [
+          { val: '↓20%', label: 'Budget waste from misattributed spend' },
+          { val: 'Full', label: 'Journey visibility, not just last click' },
+          { val: 'Data', label: 'Defensible numbers for leadership' }
+        ],
+        pitch: {
+          headline: 'Marketing teams that understand attribution models stop being misled by vanity metrics.',
+          body: 'numel trains marketers on how ML attribution works, the difference between rule-based and data-driven models, and how to pressure-test the outputs your tools show you.',
+          modules: ['Attribution model types', 'Shapley value basics', 'Journey data requirements', 'Interpreting channel scores', 'Briefing technical teams on attribution']
+        }
+      }
+    },
+    {
+      title: 'Our campaigns perform fine on average but terribly for some segments',
+      desc: 'One message, everyone. We know segmentation matters but can\'t do it at scale.',
+      edu: {
+        headline: 'Clustering models find your real audience segments, the ones that did not come from a brief.',
+        explain: 'Unsupervised clustering algorithms group your customers by actual behaviour, not assumed personas. The segments that emerge are often surprising and consistently more useful than manually defined ones. Once identified, you can personalise campaigns to each cluster.',
+        steps: [
+          { n: '01', text: '<strong>Behavioural data assembly:</strong> Purchase history, content engagement, channel preference, and timing patterns are used as inputs' },
+          { n: '02', text: '<strong>Clustering:</strong> K-means or hierarchical clustering groups customers by similarity without requiring you to define the categories' },
+          { n: '03', text: '<strong>Segment profiling:</strong> Each cluster is described by what its members do, when they do it, and what motivates them' },
+          { n: '04', text: '<strong>Campaign matching:</strong> Creative, offer, and timing are tailored per cluster at scale through automation' }
+        ],
+        outcomes: [
+          { val: '↑45%', label: 'Engagement when messaging matches segment' },
+          { val: 'Real', label: 'Segments based on behaviour, not assumptions' },
+          { val: '↓', label: 'Unsubscribes and ad fatigue per audience' }
+        ],
+        pitch: {
+          headline: 'Marketers who understand clustering can brief, evaluate, and iterate on segmentation work properly.',
+          body: 'numel\'s marketing track covers unsupervised learning concepts, how to interpret cluster outputs, and how to turn data-defined segments into creative briefs your team can actually use.',
+          modules: ['Unsupervised learning basics', 'K-means and clustering logic', 'Interpreting cluster profiles', 'Segment → brief translation', 'Measuring segment performance']
+        }
+      }
+    },
+    {
+      title: 'Ad spend is too high and we don\'t know where to cut without hurting results',
+      desc: 'We\'re over-serving ads to audiences who\'ll convert anyway. Wasting budget on the certain.',
+      edu: {
+        headline: 'Uplift modelling targets only the people your campaign actually moves.',
+        explain: 'Uplift models, also called incremental models, identify the customers who will convert only if they receive the ad. They exclude those who would convert anyway and those who are unreachable. You spend only where spending creates a real effect.',
+        steps: [
+          { n: '01', text: '<strong>Treatment and control:</strong> The model is trained on past campaigns using exposed and unexposed groups' },
+          { n: '02', text: '<strong>Incremental lift scoring:</strong> Each customer gets a score indicating how much more likely they are to convert because of the ad' },
+          { n: '03', text: '<strong>Audience suppression:</strong> Sure conversions and unreachable audiences are removed from paid targeting' },
+          { n: '04', text: '<strong>Budget reallocation:</strong> Spend concentrates on the persuadable middle for maximum ROI per dollar' }
+        ],
+        outcomes: [
+          { val: '↓25%', label: 'Paid media spend for same conversion volume' },
+          { val: 'True', label: 'Incremental ROAS, not self-attributed ROAS' },
+          { val: 'Clear', label: 'View of which audience segments respond to spend' }
+        ],
+        pitch: {
+          headline: 'Understanding uplift modelling changes how your team thinks about every campaign decision.',
+          body: 'numel teaches marketers what incremental models are, why correlation isn\'t causation in campaign data, and how to apply this thinking even before you have a model built.',
+          modules: ['Causal vs. correlational thinking', 'Uplift modelling foundations', 'Experiment design basics', 'Interpreting lift scores', 'Incrementality in media planning']
+        }
+      }
+    },
+    {
+      title: 'Content performance is unpredictable and we cannot tell what will work',
+      desc: 'Some posts explode. Most don\'t. We\'re guessing on format, topic, and timing.',
+      edu: {
+        headline: 'NLP and content models identify what patterns drive engagement before you publish.',
+        explain: 'Natural language processing models analyse your historic content performance and extract patterns: which topics, tones, formats, lengths, and publish times correlate with reach and engagement. You move from gut feel to signal-backed decisions.',
+        steps: [
+          { n: '01', text: '<strong>Content corpus analysis:</strong> Past posts, emails, and articles are analysed for linguistic and structural patterns' },
+          { n: '02', text: '<strong>Performance tagging:</strong> Each piece of content is labelled with its engagement outcome' },
+          { n: '03', text: '<strong>Pattern extraction:</strong> The model identifies what high-performing content has in common, including topic, tone, length, and CTA presence' },
+          { n: '04', text: '<strong>Brief generation:</strong> Insights become inputs to content briefs, for example that problem-led hooks outperform insight-led hooks by 3 times' }
+        ],
+        outcomes: [
+          { val: '↑', label: 'Consistency of content performance above baseline' },
+          { val: 'Pattern', label: 'Recognition across format, topic, and timing' },
+          { val: 'Faster', label: 'Brief development with signal, not assumptions' }
+        ],
+        pitch: {
+          headline: 'Content teams that understand NLP outputs make better editorial decisions and produce better creative briefs.',
+          body: 'numel trains marketers and content teams on NLP fundamentals, how to interpret text analysis outputs, and how to use ML-generated insights without becoming over-reliant on them.',
+          modules: ['NLP for non-technical teams', 'Text classification basics', 'Sentiment and topic modelling', 'Interpreting content analytics tools', 'Signal-to-brief translation']
+        }
+      }
+    }
+  ],
+
+  finance: [
+    {
+      title: 'Expense fraud and anomalies are caught too late',
+      desc: 'By the time we find the irregularity, the damage is done. Manual checks don\'t scale.',
+      edu: {
+        headline: 'Anomaly detection models flag unusual transactions in real time, before they become problems.',
+        explain: 'Unsupervised anomaly detection models learn the normal pattern of financial activity across your organisation. Any transaction that deviates significantly from that baseline in amount, timing, vendor, or behaviour pattern is surfaced automatically for review.',
+        steps: [
+          { n: '01', text: '<strong>Baseline modelling:</strong> The model learns what normal looks like for each cost centre, employee, and vendor category' },
+          { n: '02', text: '<strong>Deviation scoring:</strong> Every new transaction is compared against the baseline and outliers are scored by severity' },
+          { n: '03', text: '<strong>Alert routing:</strong> Flagged transactions are routed to reviewers with context explaining what is unusual and why' },
+          { n: '04', text: '<strong>Model learning:</strong> Reviewer decisions on confirmed fraud and false positives feed back into the model to sharpen future detection' }
+        ],
+        outcomes: [
+          { val: '↑85%', label: 'Fraud detection rate vs. rule-based systems' },
+          { val: 'Real', label: 'Time flagging before payment clears' },
+          { val: '↓', label: 'Manual review burden by prioritising real signals' }
+        ],
+        pitch: {
+          headline: 'Finance teams that understand anomaly detection models ask better questions of the systems protecting them.',
+          body: 'numel trains finance and compliance teams on how anomaly detection works, how to reduce false positive fatigue, and how to evaluate whether the tools you\'re using are actually catching what matters.',
+          modules: ['Anomaly detection fundamentals', 'Supervised vs. unsupervised detection', 'Setting detection thresholds', 'Evaluating model precision and recall', 'Fraud pattern analysis']
+        }
+      }
+    },
+    {
+      title: 'Cash flow forecasting is unreliable and creates planning problems',
+      desc: 'We\'re constantly surprised. Treasury planning, payroll, and investment timing all suffer.',
+      edu: {
+        headline: 'numel builds your team\'s ability to create multi-scenario cash flow models that update with your business reality.',
+        explain: 'Time-series models trained on your historical cash flows, accounts receivable patterns, seasonal cycles, and payment behaviour produce forecasts with explicit uncertainty ranges. Finance teams plan against scenarios rather than a single number that is always wrong.',
+        steps: [
+          { n: '01', text: '<strong>Input assembly:</strong> AR aging, historical receipts, recurring payments, payroll cycles, and the capex schedule feed the model' },
+          { n: '02', text: '<strong>Pattern learning:</strong> The model identifies seasonality, collection lag, and anomalous periods in your specific data' },
+          { n: '03', text: '<strong>Scenario outputs:</strong> Base, stress, and upside scenarios are modelled with probability ranges rather than point estimates' },
+          { n: '04', text: '<strong>Rolling updates:</strong> Forecasts update weekly as actual data arrives, closing the gap continuously' }
+        ],
+        outcomes: [
+          { val: '↑50%', label: 'Forecast accuracy at 30 and 60-day horizons' },
+          { val: '3 lanes', label: 'Scenario planning: base, stress, upside' },
+          { val: 'Weekly', label: 'Rolling updates that close the feedback loop' }
+        ],
+        pitch: {
+          headline: 'Finance teams that understand forecasting models stop being hostage to vendor black boxes.',
+          body: 'numel builds financial teams\' fluency in time-series modelling, scenario generation, and how to sense-check ML-generated forecasts so your team uses the tool rather than simply trusting it.',
+          modules: ['Time-series modelling basics', 'Regression and forecasting', 'Confidence intervals explained', 'Scenario and sensitivity analysis', 'Evaluating forecasting tools']
+        }
+      }
+    },
+    {
+      title: 'Credit or vendor risk assessment is slow and subjective',
+      desc: 'Decisions take too long. Different people apply different standards. We can\'t scale diligence.',
+      edu: {
+        headline: 'Risk scoring models make credit and vendor assessments fast, consistent, and explainable.',
+        explain: 'Classification models trained on historical risk decisions learn which combination of signals predicted good and bad outcomes. New applications or vendors are scored against this model, producing a risk tier and the key factors that drove it.',
+        steps: [
+          { n: '01', text: '<strong>Outcome labelling:</strong> Past credit or vendor decisions are labelled as defaulted or performed, reliable or problematic' },
+          { n: '02', text: '<strong>Feature selection:</strong> The model identifies which inputs, such as financial ratios, payment behaviour, and industry signals, best predict risk' },
+          { n: '03', text: '<strong>Scoring pipeline:</strong> New applications are scored in minutes rather than days, with a risk tier and key flag summary' },
+          { n: '04', text: '<strong>Human in the loop:</strong> Borderline cases are escalated with model reasoning rather than just a score so reviewers can apply judgement' }
+        ],
+        outcomes: [
+          { val: '↓70%', label: 'Decision time for standard risk assessments' },
+          { val: 'Consistent', label: 'Standards applied regardless of reviewer' },
+          { val: 'Explainable', label: 'Outputs show why, not just what, for compliance' }
+        ],
+        pitch: {
+          headline: 'Risk and credit teams that understand scoring models evaluate them properly and catch their failure modes.',
+          body: 'numel trains finance and risk teams on classification model logic, explainability frameworks, and how to ensure your risk models are defensible to regulators and auditors.',
+          modules: ['Classification models for risk', 'Feature importance and explainability', 'Model fairness and bias basics', 'Regulatory considerations in AI', 'Reviewing vendor risk models']
+        }
+      }
+    },
+    {
+      title: 'Budget variance analysis takes too long and misses root causes',
+      desc: 'We produce variance reports but can\'t always explain why or act fast enough to matter.',
+      edu: {
+        headline: 'numel trains your team to run variance analysis that surfaces root causes automatically, not after a week of digging.',
+        explain: 'Automated variance decomposition models analyse actuals against plan across every dimension simultaneously, including department, cost category, timing, and external factors, then identify the primary drivers of variance in ranked order.',
+        steps: [
+          { n: '01', text: '<strong>Dimension mapping:</strong> Every cost or revenue line is tagged with all relevant dimensions including team, category, period, and driver' },
+          { n: '02', text: '<strong>Variance detection:</strong> The model compares actuals against plan and flags meaningful deviations from the noise' },
+          { n: '03', text: '<strong>Root cause ranking:</strong> The model decomposes each variance into contributing factors, ranked by magnitude' },
+          { n: '04', text: '<strong>Narrative generation:</strong> Variance reports are generated automatically with ranked explanations ready for CFO review' }
+        ],
+        outcomes: [
+          { val: '↓80%', label: 'Time spent building variance commentary' },
+          { val: 'Ranked', label: 'Root causes, not symptom lists' },
+          { val: 'Fast', label: 'Fast enough to act within the period, not just report on it' }
+        ],
+        pitch: {
+          headline: 'FP&A teams that understand variance decomposition models use them effectively instead of working around them.',
+          body: 'numel trains financial planning teams on how ML decomposes variance, how to validate root cause outputs, and how to build a workflow where the model does the heavy lifting and humans apply judgement.',
+          modules: ['Regression and decomposition basics', 'Multidimensional analysis with models', 'Variance driver identification', 'Explainability in financial reporting', 'Automating the commentary workflow']
+        }
+      }
+    }
+  ],
+
+  hr: [
+    {
+      title: 'We\'re losing good employees and don\'t know why until it\'s too late',
+      desc: 'Attrition is hurting team continuity and is costing more than we can measure. Exit interviews don\'t tell the whole story.',
+      edu: {
+        headline: 'Attrition prediction models identify flight risk employees weeks before they resign.',
+        explain: 'Classification models trained on the behaviour patterns of employees who eventually left identify early signals in current employees. These signals include changes in performance scores, engagement survey responses, manager interaction frequency, leave patterns, and tenure milestones.',
+        steps: [
+          { n: '01', text: '<strong>Signal mapping:</strong> Identify what changed in the three to six months before past attritions, such as engagement drops, review scores, and tenure stage' },
+          { n: '02', text: '<strong>Model training:</strong> A classification model learns the profile of employees likely to leave within 90 days' },
+          { n: '03', text: '<strong>Risk scoring:</strong> Every active employee gets a risk score and high-risk employees surface to managers and HR with context' },
+          { n: '04', text: '<strong>Intervention triggers:</strong> Playbooks activate based on risk tier, triggering one-to-one prompts, development conversations, or compensation reviews' }
+        ],
+        outcomes: [
+          { val: '↑30%', label: 'Retention when intervention is triggered early' },
+          { val: '60 days', label: 'Average early warning window before resignation' },
+          { val: 'Private', label: 'Risk insights shared only with decision-makers' }
+        ],
+        pitch: {
+          headline: 'HR teams that understand attrition models use them more ethically and more effectively.',
+          body: 'numel trains HR professionals on how predictive attrition models work, how to handle the ethical dimensions carefully, and how to act on model signals in ways that are constructive rather than reactive.',
+          modules: ['Classification models for people data', 'Feature importance in attrition', 'Ethics and privacy in HR analytics', 'Intervention design from model outputs', 'Measuring retention intervention ROI']
+        }
+      }
+    },
+    {
+      title: 'Hiring takes too long and shortlisting quality is inconsistent',
+      desc: 'Hiring managers apply different standards. Time-to-fill is too high. We miss good candidates.',
+      edu: {
+        headline: 'numel equips your hiring team to use screening models that surface the best candidates faster and reduce consistency bias.',
+        explain: 'Screening models learn from your historical hiring decisions, including which candidates progressed, which performed well, and which churned early, then apply that learning to rank new applicants. The result is a structured, consistent, and fast process.',
+        steps: [
+          { n: '01', text: '<strong>Outcome labelling:</strong> Past hires are labelled by outcome as strong performers, regret hires, or early churns' },
+          { n: '02', text: '<strong>Signal extraction:</strong> The model identifies which application signals, such as skills, trajectory, and tenure patterns, correlate with strong outcomes' },
+          { n: '03', text: '<strong>Candidate scoring:</strong> New applicants are ranked with a score and the top factors that drove it' },
+          { n: '04', text: '<strong>Bias monitoring:</strong> Model outputs are audited regularly for demographic disparities to catch and correct drift' }
+        ],
+        outcomes: [
+          { val: '↓40%', label: 'Time spent on initial screening and shortlisting' },
+          { val: 'Consistent', label: 'Standards applied to every candidate regardless of reviewer' },
+          { val: 'Auditable', label: 'Shortlisting decisions with documented reasoning' }
+        ],
+        pitch: {
+          headline: 'Talent teams that understand screening models can catch bias and explain their decisions.',
+          body: 'numel trains HR and talent teams on how candidate scoring models work, the critical importance of bias auditing, and how to brief and evaluate vendors building ML-powered ATS tools.',
+          modules: ['Classification for hiring', 'Bias and fairness in AI models', 'Auditing model outputs', 'Features that predict performance', 'Evaluating ATS and screening tools']
+        }
+      }
+    },
+    {
+      title: 'We can\'t identify who\'s ready for promotion or which skills gaps are growing',
+      desc: 'Succession planning is subjective. High potentials are identified too late. Skills gaps surprise us.',
+      edu: {
+        headline: 'numel trains your HR team to use performance models that map who is ready for promotion and where skills gaps are before they become crises.',
+        explain: 'Clustering and regression models analyse performance data, skills assessments, project outcomes, and career trajectory patterns to identify high-potential employees and surface emerging skills gaps across teams and functions.',
+        steps: [
+          { n: '01', text: '<strong>Performance signal aggregation:</strong> Review scores, project contributions, peer feedback, and skills data are combined' },
+          { n: '02', text: '<strong>High-potential profiling:</strong> The model clusters employees by growth trajectory and flags those showing acceleration patterns' },
+          { n: '03', text: '<strong>Skills gap mapping:</strong> Current skills inventory is compared against future role requirements to surface gaps by team and function' },
+          { n: '04', text: '<strong>Development routing:</strong> Identified gaps trigger targeted learning paths rather than generic learning and development programmes' }
+        ],
+        outcomes: [
+          { val: 'Early', label: 'High-potential identification, six to twelve months sooner than typical' },
+          { val: 'Mapped', label: 'Skills gaps by team, function, and criticality' },
+          { val: '↑', label: 'L&D ROI from targeted rather than blanket training' }
+        ],
+        pitch: {
+          headline: 'HR leaders who understand talent analytics models make succession decisions with data, not politics.',
+          body: 'numel trains HR teams on how performance clustering and skills gap analysis work, how to challenge model outputs, and how to build a talent development programme that responds to data.',
+          modules: ['Clustering for talent segmentation', 'Skills taxonomy and gap modelling', 'Performance data quality', 'Succession planning with analytics', 'L&D personalisation models']
+        }
+      }
+    },
+    {
+      title: 'Workforce planning feels reactive and we are always behind on headcount decisions',
+      desc: 'We hire after the gap exists. We over-hire in some areas, under-hire in others.',
+      edu: {
+        headline: 'Demand forecasting models project headcount needs before pressure mounts.',
+        explain: 'Regression and time-series models trained on historical headcount data, business pipeline, and productivity ratios project future workforce demand by function, role type, and time horizon. You plan 6–12 months ahead, not 6 weeks behind.',
+        steps: [
+          { n: '01', text: '<strong>Demand drivers:</strong> Revenue pipeline, product roadmap, seasonal patterns, and attrition rates feed the model' },
+          { n: '02', text: '<strong>Capacity modelling:</strong> Current team productivity and utilisation are baseline inputs for gap calculation' },
+          { n: '03', text: '<strong>Scenario planning:</strong> The model projects demand under growth, flat, and contraction scenarios so HR can plan across a range' },
+          { n: '04', text: '<strong>Hiring lead time:</strong> The model accounts for time-to-fill by role to indicate when hiring decisions need to start' }
+        ],
+        outcomes: [
+          { val: '3–6mo', label: 'Forward visibility on headcount requirements' },
+          { val: '↓', label: 'Reactive hiring and over-hiring costs' },
+          { val: 'Scenario', label: 'Plans for growth, flat, and contraction ready ahead' }
+        ],
+        pitch: {
+          headline: 'HR teams that understand demand forecasting models become strategic partners rather than administrative functions.',
+          body: 'numel teaches HR and people operations teams on forecasting concepts, how to model workforce scenarios, and how to present headcount plans to leadership with data-backed confidence.',
+          modules: ['Regression and demand forecasting', 'Capacity modelling concepts', 'Workforce scenario planning', 'Communicating headcount data to leadership', 'Integrating analytics into HR planning workflows']
+        }
+      }
+    }
+  ],
+
+  ops: [
+    {
+      title: 'Demand forecasting is wrong and it\'s causing over/under-stocking',
+      desc: 'We swing between stockouts and excess inventory. Both cost money. Neither is acceptable.',
+      edu: {
+        headline: 'numel trains your ops team to run demand forecasting that cuts both stockouts and overstock simultaneously.',
+        explain: 'Time-series forecasting models trained on your sales history, seasonal patterns, promotional calendars, and external signals (weather, events, market data) produce SKU-level demand forecasts with accuracy levels that spreadsheet models simply can\'t match.',
+        steps: [
+          { n: '01', text: '<strong>Historical demand analysis:</strong> The model learns seasonality, promotion uplift, day-of-week effects, and trend lines per SKU' },
+          { n: '02', text: '<strong>External signal integration:</strong> Weather, competitor activity, market indices, and event calendars add predictive power' },
+          { n: '03', text: '<strong>Probabilistic output:</strong> The model produces a demand range with confidence levels rather than a single number to defend' },
+          { n: '04', text: '<strong>Reorder automation:</strong> Forecast outputs connect directly to procurement triggers, reducing human lag in the loop' }
+        ],
+        outcomes: [
+          { val: '↓35%', label: 'Inventory carrying costs from reduced overstock' },
+          { val: '↓50%', label: 'Stockout frequency on core SKUs' },
+          { val: 'SKU-level', label: 'Forecasts at SKU level, not category-level averages' }
+        ],
+        pitch: {
+          headline: 'Operations teams that understand forecasting models push back on bad numbers and get better ones.',
+          body: 'numel trains supply chain and ops teams on how demand forecasting models work, how to challenge vendor forecast outputs, and how to integrate ML outputs into your planning process without losing operational judgement.',
+          modules: ['Time-series fundamentals', 'Seasonal decomposition', 'Forecast accuracy metrics (MAPE, RMSE)', 'Integrating numel forecasts with planning', 'Evaluating demand forecasting tools']
+        }
+      }
+    },
+    {
+      title: 'Equipment downtime is unpredictable and maintenance costs are too high',
+      desc: 'Preventive maintenance is expensive. Reactive maintenance is more expensive. Neither feels right.',
+      edu: {
+        headline: 'Predictive maintenance models tell you when equipment will fail before it actually does.',
+        explain: 'Regression and classification models trained on sensor data, maintenance logs, and failure histories learn to identify the pattern of degradation before failure occurs. Maintenance is scheduled exactly when needed, not on an arbitrary calendar and not after a breakdown.',
+        steps: [
+          { n: '01', text: '<strong>Sensor data ingestion:</strong> Temperature, vibration, pressure, RPM, and other signals are fed to the model in near-real-time' },
+          { n: '02', text: '<strong>Failure pattern learning:</strong> The model identifies which sensor signal sequences preceded past failures' },
+          { n: '03', text: '<strong>Remaining useful life:</strong> The model outputs a predicted time-to-failure range for each unit under monitoring' },
+          { n: '04', text: '<strong>Maintenance scheduling:</strong> Alerts trigger work orders at the optimal window, after real need emerges but before failure occurs' }
+        ],
+        outcomes: [
+          { val: '↓45%', label: 'Unplanned downtime incidents' },
+          { val: '↓30%', label: 'Maintenance costs vs. calendar-based PM' },
+          { val: 'RUL', label: 'Remaining useful life estimates per unit, not per machine type' }
+        ],
+        pitch: {
+          headline: 'Ops teams that understand predictive maintenance models know what to trust and when to override.',
+          body: 'numel trains operations and maintenance teams on how RUL models work, how to validate sensor data quality, and how to build a workflow where model recommendations improve human decisions.',
+          modules: ['Supervised learning for failure prediction', 'Sensor data and feature engineering', 'Remaining useful life modelling', 'Anomaly detection in equipment data', 'Integrating predictive maintenance operationally']
+        }
+      }
+    },
+    {
+      title: 'Supplier reliability is a risk and we only find out when things go wrong',
+      desc: 'We\'re dependent on suppliers who underperform. We don\'t have a way to see it coming.',
+      edu: {
+        headline: 'Supplier risk models score delivery reliability and flag deterioration before it hits your operations.',
+        explain: 'Classification and regression models trained on delivery records, quality scores, financial signals, and communication patterns produce a reliability score per supplier. Trend tracking ensures you can see when a previously reliable supplier starts to slip.',
+        steps: [
+          { n: '01', text: '<strong>Supplier performance history:</strong> On-time delivery, quality defect rates, invoice accuracy, and response times are modelled' },
+          { n: '02', text: '<strong>External signals:</strong> Supplier financial health, news signals, and industry data add early warning capability' },
+          { n: '03', text: '<strong>Risk scoring:</strong> Each supplier gets a current score and a trend indicating whether they are stable, improving, or deteriorating' },
+          { n: '04', text: '<strong>Procurement triggers:</strong> High-risk suppliers surface to category managers with alternative sourcing options already prepared' }
+        ],
+        outcomes: [
+          { val: 'Early', label: 'Warning of supplier deterioration, weeks before it affects operations' },
+          { val: 'Scored', label: 'Every supplier on reliability, not just tier classification' },
+          { val: '↓', label: 'Reactive sourcing costs when primary supplier fails' }
+        ],
+        pitch: {
+          headline: 'Procurement and ops teams that understand risk models make better sourcing decisions under uncertainty.',
+          body: 'numel trains operations and supply chain teams on risk scoring concepts, how to weight supplier signals, and how to build procurement workflows that respond to model outputs.',
+          modules: ['Classification for supplier risk', 'Feature selection for procurement data', 'Risk score interpretation', 'Alternative sourcing strategy with analytics', 'Evaluating supplier risk tools']
+        }
+      }
+    },
+    {
+      title: 'Logistics costs keep rising and we don\'t have visibility into why',
+      desc: 'Fuel, routing, and last-mile costs are increasing. We can\'t optimise what we can\'t see.',
+      edu: {
+        headline: 'Route optimisation and cost attribution models cut logistics spend and surface inefficiency.',
+        explain: 'Optimisation models analyse your routes, loads, timing, carrier performance, and cost structure to recommend optimal routing decisions. Cost attribution models then break down exactly where spend is rising and why.',
+        steps: [
+          { n: '01', text: '<strong>Cost decomposition:</strong> Every logistics cost is tagged by route, carrier, lane, time window, load factor, and exceptions' },
+          { n: '02', text: '<strong>Route optimisation:</strong> The optimisation model identifies route combinations that minimise cost while meeting target service levels' },
+          { n: '03', text: '<strong>Anomaly detection:</strong> Unusual cost spikes are flagged with probable cause, such as carrier surcharges, rerouting, or handling delays' },
+          { n: '04', text: '<strong>Scenario modelling:</strong> The ops team tests the cost impact of carrier changes, hub additions, or volume shifts before committing' }
+        ],
+        outcomes: [
+          { val: '↓12–18%', label: 'Logistics cost through route optimisation' },
+          { val: 'Lane-level', label: 'Cost visibility at lane level, not just total logistics spend' },
+          { val: 'Scenarios', label: 'Modelled before network changes are made' }
+        ],
+        pitch: {
+          headline: 'Operations teams that understand optimisation and cost models stop relying on carrier proposals for the numbers.',
+          body: 'numel teaches logistics and supply chain teams on how route optimisation models work, how to interpret cost attribution outputs, and how to run scenario analyses that support smarter network decisions.',
+          modules: ['Optimisation models overview', 'Cost decomposition with numel', 'Anomaly detection in logistics data', 'Scenario analysis for network decisions', 'Evaluating TMS and logistics tools']
+        }
+      }
+    }
+  ]
+};
+
+// ══════════════════════════════════════
+// STATE
+// ══════════════════════════════════════
+
+let selectedDept = null;
+let selectedProb = null;
+
+// ══════════════════════════════════════
+// NAVIGATION
+// ══════════════════════════════════════
+
+function goTo(screenId) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(screenId).classList.add('active');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+  updatePills(screenId);
+}
+
+function updatePills(screenId) {
+  const map = { 'screen-intro': 0, 'screen-dept': 1, 'screen-prob': 2, 'screen-result': 3 };
+  const step = map[screenId] || 0;
+  ['pill-1','pill-2','pill-3'].forEach((id, i) => {
+    const el = document.getElementById(id);
+    el.classList.remove('active','done');
+    if (i + 1 === step) el.classList.add('active');
+    else if (i + 1 < step) el.classList.add('done');
+  });
+}
+
+// ══════════════════════════════════════
+// RENDER DEPT CARDS
+// ══════════════════════════════════════
+
+function renderDepts() {
+  const grid = document.getElementById('dept-grid');
+  grid.innerHTML = '';
+  departments.forEach((dept, idx) => {
+    const card = document.createElement('div');
+    const isLast = idx === departments.length - 1 && departments.length % 2 !== 0;
+    card.className = 'dept-card' + (selectedDept?.id === dept.id ? ' selected' : '') + (isLast ? ' dept-card-full' : '');
+    card.innerHTML = `
+      <div class="dept-check">
+        <svg viewBox="0 0 12 12" fill="none" stroke="#222266" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M2 6l3 3 5-5"/>
+        </svg>
+      </div>
+      <span class="dept-icon">${dept.icon}</span>
+      <div class="dept-name">${dept.name}</div>
+      <div class="dept-sub">${dept.sub}</div>
+    `;
+    card.addEventListener('click', () => selectDept(dept));
+    grid.appendChild(card);
+  });
+}
+
+function selectDept(dept) {
+  selectedDept = dept;
+  selectedProb = null;
+  renderDepts();
+  setTimeout(() => {
+    renderProblems();
+    goTo('screen-prob');
+  }, 180);
+}
+
+// ══════════════════════════════════════
+// RENDER PROBLEMS
+// ══════════════════════════════════════
+
+function renderProblems() {
+  const badge = document.getElementById('dept-context-badge');
+  badge.innerHTML = `${selectedDept.icon} ${selectedDept.name}`;
+
+  const list = document.getElementById('problems-list');
+  list.innerHTML = '';
+
+  const deptProblems = problems[selectedDept.id] || [];
+  deptProblems.forEach((prob, i) => {
+    const card = document.createElement('div');
+    card.className = 'prob-card';
+    card.innerHTML = `
+      <div class="prob-num">0${i+1}</div>
+      <div class="prob-content">
+        <div class="prob-title">${prob.title}</div>
+        <div class="prob-desc">${prob.desc}</div>
+      </div>
+      <div class="prob-arrow">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="16" height="16">
+          <path d="M3 8h10M9 4l4 4-4 4"/>
+        </svg>
+      </div>
+    `;
+    card.addEventListener('click', () => selectProblem(prob));
+    list.appendChild(card);
+  });
+}
+
+function selectProblem(prob) {
+  selectedProb = prob;
+  renderResult();
+  goTo('screen-result');
+}
+
+// ══════════════════════════════════════
+// RENDER RESULT
+// ══════════════════════════════════════
+
+function renderResult() {
+  const e = selectedProb.edu;
+
+  // Breadcrumb
+  document.getElementById('result-breadcrumb').innerHTML = `
+    <div class="bc-tag bc-dept">${selectedDept.icon} ${selectedDept.name}</div>
+    <div class="bc-sep">›</div>
+    <div class="bc-tag bc-prob">${selectedProb.title}</div>
+  `;
+
+  // Edu block
+  document.getElementById('edu-headline').textContent = e.headline;
+  document.getElementById('edu-explain').textContent = e.explain;
+
+  const stepsEl = document.getElementById('how-steps');
+  stepsEl.innerHTML = '';
+  e.steps.forEach(step => {
+    stepsEl.innerHTML += `
+      <div class="how-step">
+        <div class="how-n">${step.n}</div>
+        <div class="how-text">${step.text}</div>
+      </div>
+    `;
+  });
+
+  // Outcomes
+  const outcomesEl = document.getElementById('outcome-strip');
+  outcomesEl.innerHTML = '';
+  e.outcomes.forEach(o => {
+    outcomesEl.innerHTML += `
+      <div class="outcome-card">
+        <div class="outcome-val">${o.val}</div>
+        <div class="outcome-label">${o.label}</div>
+      </div>
+    `;
+  });
+
+  // Pitch
+  const p = e.pitch;
+  document.getElementById('pitch-headline').textContent = p.headline;
+  document.getElementById('pitch-body').textContent = p.body;
+
+  const modulesEl = document.getElementById('pitch-modules');
+  modulesEl.innerHTML = '';
+  p.modules.forEach(m => {
+    modulesEl.innerHTML += `<div class="module-tag">${m}</div>`;
+  });
+}
+
+// ══════════════════════════════════════
+// INIT
+// ══════════════════════════════════════
+
+renderDepts();
+</script>
+</body>
+</html>
